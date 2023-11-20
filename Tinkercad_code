@@ -1,0 +1,82 @@
+// Code in Tinkercad
+
+#include <ArduinoJson.h>
+#include<string.h>
+String ssid = "Simulator Wifi"; // SSID to connect to
+String password = "";
+String host = "api.thingspeak.com";
+const int httpPort = 80;
+String uri = "/channels/1220561/feeds.json?api_key=9DJM7YOWVX6XC5BB&results=2";
+int motor = 10;
+int motor2 = 11;
+int ult = 9;
+long readUltrasonicDistance(int triggerPin, int echoPin)
+{
+pinMode(triggerPin, OUTPUT); // Clear the trigger
+digitalWrite(triggerPin, LOW);
+delayMicroseconds(2);
+// Sets the trigger pin to HIGH state for 10 microseconds
+digitalWrite(triggerPin, HIGH);
+delayMicroseconds(10);
+digitalWrite(triggerPin, LOW);
+pinMode(echoPin, INPUT);
+// Reads the echo pin, and returns the sound wave travel time in microseconds
+return pulseIn(echoPin, HIGH);
+}
+int setupESP8266(void) {
+14
+Serial.begin(115200);
+Serial.println("AT");
+delay(10);
+if (!Serial.find("OK")) return 1;
+Serial.println("AT+CWJAP=\"" + ssid + "\",\"" + password + "\"");
+delay(10);
+if (!Serial.find("OK")) return 2;
+Serial.println("AT+CIPSTART=\"TCP\",\"" + host + "\"," + httpPort);
+delay(50);
+if (!Serial.find("OK")) return 3;
+return 0;
+}
+void anydata(void) {
+String httpPacket = "GET " + uri + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n";
+int length = httpPacket.length();
+Serial.print("AT+CIPSEND=");
+Serial.println(length);
+delay(10);
+Serial.print(httpPacket);
+delay(10);
+String ch;
+ch = Serial.readString();
+Serial.println(ch);
+int point = 0;
+for(int i = 0 ;i<500 ; i++)
+{
+if(ch[i]=='x')
+{
+point = i+1;
+break;} }
+Serial.println(ch[point]);
+if(ch[point]=='y')
+{
+Serial.println("NO CAR FOUND... ACCELERATING...");}
+else {
+Serial.println("CAR FOUND FINDING DISTANCE....");
+int cm = 0.01723 * readUltrasonicDistance(ult, ult);
+Serial.println(cm);
+15
+digitalWrite(motor,HIGH);
+digitalWrite(motor2,HIGH);
+delay(5000);
+digitalWrite(motor,LOW);
+digitalWrite(motor2,LOW);}
+if (!Serial.find("SEND OK\r\n")) return;
+}
+void setup() {
+setupESP8266();
+pinMode(motor,OUTPUT);
+pinMode(ult,INPUT);
+}
+void loop() {
+anydata();
+delay(1000);
+}
